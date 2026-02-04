@@ -1,10 +1,8 @@
 export const environment = {
   production: false,
   salesforce: {
-    baseUrl: '',
-    clientId: '',
-    clientSecret: '',
-    catalogId: '',
-    priceBookId: '',
+    baseUrl: 'https://your-instance.my.stm.salesforce.com',
+    clientId: 'YOUR_SALESFORCE_CLIENT_ID',
+    clientSecret: 'YOUR_SALESFORCE_CLIENT_SECRET',
   },
 };

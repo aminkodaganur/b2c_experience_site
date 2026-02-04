@@ -1,0 +1,62 @@
+<div class="py-4">
+  <h2 class="mb-3">Product Listing</h2>
+  @if (categoryId) {
+    <p class="text-muted mb-3">Category: {{ categoryId }}</p>
+  }
+
+  @if (loading) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status" aria-label="Loading">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2 text-muted">Loading products from Salesforce...</p>
+    </div>
+  } @else if (error) {
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+      <span class="me-2" aria-hidden="true">⚠</span>
+      <div>
+        <strong>Error</strong> {{ error }}
+      </div>
+    </div>
+    <button type="button" class="btn btn-outline-primary" (click)="loadProducts()">Retry</button>
+  } @else {
+    <div class="row g-3">
+      @for (product of filteredProducts; track product.id) {
+        <div class="col-md-6 col-lg-4">
+          <div class="card h-100 shadow-sm">
+            <div class="product-image-section">
+              @if (product.imageUrl && !product.imageError) {
+                <img [src]="product.imageUrl" [alt]="product.name" class="card-img-top product-image" loading="lazy" (error)="product.imageError = true">
+              } @else {
+                <div class="placeholder-image">
+                  <span class="placeholder-icon" aria-hidden="true">📦</span>
+                </div>
+              }
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">{{ product.name }}</h5>
+              <p class="card-text text-primary fw-bold">${{ product.price | number:'1.2-2' }}</p>
+              <div class="product-description mb-2">
+                <small class="text-muted d-block mb-1 fw-semibold">Description</small>
+                <p class="card-text small mb-0">{{ product.description }}</p>
+              </div>
+              <div class="quantity-section mb-2">
+                <label class="form-label small mb-1 fw-semibold">Quantity</label>
+                <div class="input-group input-group-sm" style="max-width: 120px;">
+                  <button type="button" class="btn btn-outline-secondary" (click)="updateQuantity(product, -1)" [attr.aria-label]="'Decrease quantity'">−</button>
+                  <input type="number" class="form-control text-center" [(ngModel)]="product.quantity" [name]="'qty-' + product.id" min="1" max="99" (blur)="clampQuantity(product)">
+                  <button type="button" class="btn btn-outline-secondary" (click)="updateQuantity(product, 1)" [attr.aria-label]="'Increase quantity'">+</button>
+                </div>
+              </div>
+              <a [routerLink]="['/product', product.id]" [queryParams]="{ catalogId: product.catalogId, priceBookId: product.priceBookId }" class="btn btn-outline-primary btn-sm me-1">Details</a>
+              <a [routerLink]="['/configure', product.id]" [queryParams]="{ catalogId: product.catalogId, priceBookId: product.priceBookId }" class="btn btn-primary btn-sm">Configure</a>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+    @if (filteredProducts.length === 0 && !loading) {
+      <p class="text-muted">No products found.</p>
+    }
+  }
+</div>

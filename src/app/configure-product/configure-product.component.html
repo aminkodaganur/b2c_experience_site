@@ -1,0 +1,172 @@
+@if (product) {
+  <div class="configure-page">
+    <!-- Return to Quote / Product -->
+    <div class="mb-3">
+      <a [routerLink]="['/product', product.id]" class="text-primary text-decoration-none">← Return to Quote</a>
+    </div>
+
+    <div class="row g-4">
+      <!-- Left: Product Configuration -->
+      <div class="col-lg-8">
+        <div class="configure-left border rounded p-4 bg-white">
+          <!-- Product image section -->
+          <div class="product-image-section mb-4">
+            <div class="row align-items-start">
+              <div class="col-auto">
+                <div class="config-product-image-wrapper rounded overflow-hidden bg-light">
+                  @if (!product.imageError) {
+                    <img [src]="product.imageUrl" [alt]="product.name" class="config-product-img" loading="lazy" (error)="onImageError()">
+                  } @else {
+                    <div class="config-placeholder d-flex align-items-center justify-content-center">
+                      <span class="text-muted fs-1">📦</span>
+                    </div>
+                  }
+                </div>
+              </div>
+              <div class="col">
+                <h2 class="h4 fw-bold mb-2">{{ product.name }}</h2>
+                <p class="text-muted small mb-3">{{ product.description }}</p>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                  <div>
+                    <span class="fw-bold fs-5 text-primary">${{ product.price | number:'1.2-2' }}</span>
+                    <span class="d-block small text-muted">One Time</span>
+                  </div>
+                  <div class="quantity-field">
+                    <label class="form-label small mb-1 fw-semibold">Quantity</label>
+                    <input type="number" class="form-control form-control-sm" [(ngModel)]="quantity" name="configQty" min="1" max="99" style="width: 80px;">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Configuration Tabs -->
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            @for (tab of tabs; track tab.id) {
+              <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link" [class.active]="activeTab === tab.id" (click)="setActiveTab(tab.id)">
+                  {{ tab.label }}
+                </button>
+              </li>
+            }
+          </ul>
+
+          <!-- Tab content: Display -->
+          @if (activeTab === 'display') {
+            <div class="config-options">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">* Display</label>
+                <select class="form-select" [(ngModel)]="selectedDisplay" name="display">
+                  @for (opt of displayOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">* Screen Size</label>
+                <select class="form-select" [(ngModel)]="selectedScreenSize" name="screenSize">
+                  @for (opt of screenSizeOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+
+          @if (activeTab === 'graphics') {
+            <div class="config-options">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">* Graphics</label>
+                <select class="form-select" [(ngModel)]="selectedGraphics" name="graphics">
+                  @for (opt of graphicsOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+
+          @if (activeTab === 'memory') {
+            <div class="config-options">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">* Memory</label>
+                <select class="form-select" [(ngModel)]="selectedMemory" name="memory">
+                  @for (opt of memoryOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+
+          @if (activeTab === 'processor') {
+            <div class="config-options">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">* Processor</label>
+                <select class="form-select" [(ngModel)]="selectedProcessor" name="processor">
+                  @for (opt of processorOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+
+          @if (activeTab === 'storage') {
+            <div class="config-options">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">* Storage</label>
+                <select class="form-select" [(ngModel)]="selectedStorage" name="storage">
+                  @for (opt of storageOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Right: Summary -->
+      <div class="col-lg-4">
+        <div class="summary-panel border rounded p-4 bg-white h-100">
+          <h3 class="h5 fw-bold mb-3">Summary</h3>
+          <p class="fw-semibold mb-1">{{ product.name }}</p>
+          <p class="text-muted small mb-3">Quantity {{ quantity }}</p>
+
+          <h4 class="h6 fw-semibold mb-2">Attributes</h4>
+          <ul class="list-unstyled small mb-4">
+            @for (attr of summaryAttributes; track attr.label) {
+              <li class="mb-1">{{ attr.label }} {{ attr.value }}</li>
+            }
+          </ul>
+
+          <h4 class="h6 fw-semibold mb-2">Totals</h4>
+          <ul class="list-unstyled small">
+            <li class="d-flex justify-content-between mb-1"><span>One Time Total</span><span>${{ oneTimeTotal | number:'1.2-2' }}</span></li>
+            <li class="d-flex justify-content-between mb-1"><span>Monthly Total</span><span>${{ monthlyTotal | number:'1.2-2' }}</span></li>
+            <li class="d-flex justify-content-between mb-1"><span>Annual Total</span><span>${{ annualTotal | number:'1.2-2' }}</span></li>
+            <li class="d-flex justify-content-between mb-1"><span>Quarterly Total</span><span>${{ quarterlyTotal | number:'1.2-2' }}</span></li>
+            <li class="d-flex justify-content-between"><span>Semi-Annual Total</span><span>${{ semiAnnualTotal | number:'1.2-2' }}</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="configure-footer mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancel()">Cancel</button>
+      <button type="button" class="btn btn-outline-secondary" (click)="updatePrices()">
+        <span class="me-1" aria-hidden="true">↻</span> Update Prices
+      </button>
+      <button type="button" class="btn btn-primary" (click)="saveAndExit()">Save &amp; Exit</button>
+    </div>
+  </div>
+} @else {
+  <div class="py-4">
+    <p class="text-muted">Product not found.</p>
+    <a routerLink="/products" class="btn btn-primary">Back to Products</a>
+  </div>
+}

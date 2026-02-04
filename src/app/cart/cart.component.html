@@ -1,0 +1,35 @@
+<div class="py-4">
+  <h2 class="mb-4">Cart</h2>
+  @if (items.length > 0) {
+    <div class="table-responsive">
+      <table class="table table-bordered">
+        <thead class="table-light">
+          <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Qty</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items; track item.id) {
+            <tr>
+              <td>{{ item.name }}</td>
+              <td>${{ item.price }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>${{ (item.price * item.quantity).toFixed(2) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end mb-3">
+      <strong>Total: ${{ total.toFixed(2) }}</strong>
+    </div>
+    <a routerLink="/catalog" class="btn btn-outline-primary me-2">Continue Shopping</a>
+    <button class="btn btn-primary" disabled>Checkout (demo)</button>
+  } @else {
+    <p class="text-muted">Your cart is empty.</p>
+    <a routerLink="/catalog" class="btn btn-primary">Browse Catalog</a>
+  }
+</div>

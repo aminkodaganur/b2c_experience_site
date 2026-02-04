@@ -1,0 +1,46 @@
+<div class="py-4">
+  @if (loading) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status" aria-label="Loading">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2 text-muted">Loading product details...</p>
+    </div>
+  } @else if (error) {
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+      <span class="me-2" aria-hidden="true">⚠</span>
+      <div>{{ error }}</div>
+    </div>
+    <a routerLink="/products" class="btn btn-primary">Back to Products</a>
+  } @else if (product) {
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a routerLink="/products">Products</a></li>
+        <li class="breadcrumb-item active">{{ product.name }}</li>
+      </ol>
+    </nav>
+    <div class="card shadow-sm">
+      @if (hasImage) {
+        <div class="detail-image-section">
+          @if (productImageError) {
+            <div class="detail-placeholder d-flex align-items-center justify-content-center">
+              <span class="text-muted fs-1" aria-hidden="true">📦</span>
+            </div>
+          } @else {
+            <img [src]="productImageUrl" [alt]="product.name" class="card-img-top detail-product-img" loading="lazy" (error)="onImageError()">
+          }
+        </div>
+      }
+      <div class="card-body">
+        <h2 class="card-title">{{ product.name }}</h2>
+        <p class="text-primary fs-4 fw-bold">${{ productPrice | number:'1.2-2' }}</p>
+        <p class="card-text text-muted">{{ product.description }}</p>
+        <a [routerLink]="['/configure', product.id]" class="btn btn-primary">Configure & Add to Cart</a>
+        <a routerLink="/products" class="btn btn-outline-secondary ms-2">Back to Listing</a>
+      </div>
+    </div>
+  } @else {
+    <p class="text-muted">Product not found.</p>
+    <a routerLink="/products" class="btn btn-primary">Back to Products</a>
+  }
+</div>

@@ -1,0 +1,45 @@
+.product-image-section {
+  overflow: hidden;
+  background: var(--bs-light, #f8f9fa);
+}
+
+.product-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.placeholder-image {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-light, #f8f9fa);
+  color: #adb5bd;
+}
+
+.placeholder-icon {
+  font-size: 3rem;
+}
+
+.product-description .card-text {
+  line-height: 1.4;
+  max-height: 3em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.quantity-section .input-group .form-control {
+  -moz-appearance: textfield;
+}
+.quantity-section .input-group .form-control::-webkit-outer-spin-button,
+.quantity-section .input-group .form-control::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.card { transition: box-shadow 0.2s; }
+.card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }

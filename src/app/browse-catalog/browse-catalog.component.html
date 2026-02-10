@@ -1,17 +1,29 @@
 <div class="py-4">
   <h2 class="mb-3">Browse & Select Catalog</h2>
-  <p class="text-muted mb-4">Choose a category to view products</p>
-  <div class="row g-3">
-    @for (category of categories; track category.id) {
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100 shadow-sm sim-pointer" (click)="selectCatalog(category.id)">
-          <div class="card-body text-center">
-            <h5 class="card-title">{{ category.name }}</h5>
-            <p class="card-text text-muted small">{{ category.description }}</p>
-            <span class="badge bg-primary">Browse</span>
+  <p class="text-muted mb-4">Choose a catalog to view products</p>
+
+  @if (loading) {
+    <p class="text-muted">Loading catalogs from Salesforce...</p>
+  } @else if (error) {
+    <div class="alert alert-warning" role="alert">
+      {{ error }}
+      <button type="button" class="btn btn-sm btn-outline-primary ms-2" (click)="loadCatalogs()">Retry</button>
+    </div>
+  } @else if (catalogs.length === 0) {
+    <p class="text-muted">No catalogs found.</p>
+  } @else {
+    <div class="row g-3">
+      @for (catalog of catalogs; track catalog.id) {
+        <div class="col-md-6 col-lg-3">
+          <div class="card h-100 shadow-sm sim-pointer" (click)="selectCatalog(catalog)">
+            <div class="card-body text-center">
+              <h5 class="card-title">{{ catalog.name }}</h5>
+              <p class="card-text text-muted small">View products in this catalog</p>
+              <span class="badge bg-primary">Browse</span>
+            </div>
           </div>
         </div>
-      </div>
-    }
-  </div>
+      }
+    </div>
+  }
 </div>

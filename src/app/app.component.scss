@@ -1,1 +1,73 @@
 :host { display: block; min-height: 100vh; }
+
+.toast-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1100;
+  pointer-events: none;
+}
+
+.toast-message {
+  padding: 1rem 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
+  animation: toast-in 0.25s ease-out;
+}
+
+.toast-success {
+  background: #198754;
+  color: #fff;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cart-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.5rem 0.9rem !important;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  margin-left: 0.25rem;
+}
+
+.cart-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.cart-btn-icon {
+  font-size: 1.35rem;
+}
+
+.cart-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: #fff;
+  color: #0d6efd;
+  border-radius: 999px;
+}
+
+.cart-count--zero {
+  background: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}

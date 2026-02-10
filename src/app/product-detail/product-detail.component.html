@@ -35,7 +35,8 @@
         <h2 class="card-title">{{ product.name }}</h2>
         <p class="text-primary fs-4 fw-bold">${{ productPrice | number:'1.2-2' }}</p>
         <p class="card-text text-muted">{{ product.description }}</p>
-        <a [routerLink]="['/configure', product.id]" class="btn btn-primary">Configure & Add to Cart</a>
+        <a [routerLink]="['/configure', product.id]" [queryParams]="getConfigureQueryParams()" class="btn btn-primary">Configure</a>
+        <button type="button" class="btn btn-outline-primary ms-2" (click)="addToCart()">Add to cart</button>
         <a routerLink="/products" class="btn btn-outline-secondary ms-2">Back to Listing</a>
       </div>
     </div>

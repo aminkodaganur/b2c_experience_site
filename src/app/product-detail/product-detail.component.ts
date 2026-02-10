@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, takeUntil, combineLatest, map } from 'rxjs';
 import { SalesforceApiService, ProductDetail } from '../services/salesforce-api.service';
-import { environment } from '../../environments/environment';
+import { CartService } from '../services/cart.service';
+import { ToastService } from '../services/toast.service';
 
 type StaticProduct = { id: number; name: string; price: number; description: string };
 
@@ -29,7 +30,12 @@ export class ProductDetailComponent implements OnDestroy {
     5: { id: 5, name: 'Yoga Mat', price: 24.99, description: 'Non-slip, eco-friendly mat with carry strap.' }
   };
 
-  constructor(private route: ActivatedRoute, private salesforceApi: SalesforceApiService) {
+  constructor(
+    private route: ActivatedRoute,
+    private salesforceApi: SalesforceApiService,
+    private cart: CartService,
+    private toast: ToastService
+  ) {
     combineLatest([
       this.route.params,
       this.route.queryParams,
@@ -53,10 +59,8 @@ export class ProductDetailComponent implements OnDestroy {
       }
 
       const fromCache = this.salesforceApi.getProductById(this.id);
-      const catalogIdToUse =
-        catalogId ?? fromCache?.catalogId ?? (environment.salesforce as { catalogId?: string }).catalogId ?? '';
-      const priceBookIdToUse =
-        priceBookId ?? fromCache?.priceBookId ?? (environment.salesforce as { priceBookId?: string }).priceBookId ?? '';
+      const catalogIdToUse = catalogId ?? fromCache?.catalogId ?? '';
+      const priceBookIdToUse = priceBookId ?? fromCache?.priceBookId ?? '';
       if (!catalogIdToUse || !priceBookIdToUse) {
         this.error = 'Product context (catalog / price book) is missing. Open this product from the product list.';
         return;
@@ -101,5 +105,30 @@ export class ProductDetailComponent implements OnDestroy {
 
   onImageError(): void {
     if (this.product && 'imageError' in this.product) (this.product as ProductDetail).imageError = true;
+  }
+
+  getConfigureQueryParams(): { catalogId?: string; priceBookId?: string } {
+    const q = this.route.snapshot.queryParams;
+    return {
+      catalogId: q['catalogId'] ?? undefined,
+      priceBookId: q['priceBookId'] ?? undefined
+    };
+  }
+
+  addToCart(): void {
+    if (!this.product) return;
+    const id = String(this.product.id);
+    const name = this.product.name;
+    const price = this.productPrice;
+    const priceBookEntryId = 'priceBookEntryId' in this.product ? this.product.priceBookEntryId : undefined;
+    const priceBookId = 'priceBookId' in this.product ? this.product.priceBookId : undefined;
+    this.cart
+      .addItem(id, name, price, 1, priceBookEntryId, priceBookId)
+      .subscribe({
+        next: () => this.toast.show(`${name} added to cart`),
+        error: (err) => {
+          this.error = err?.message ?? 'Failed to add to cart.';
+        }
+      });
   }
 }

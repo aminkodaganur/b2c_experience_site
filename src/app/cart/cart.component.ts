@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { CartService } from '../services/cart.service';
 
 @Component({
   selector: 'app-cart',
@@ -10,17 +11,21 @@ import { RouterLink } from '@angular/router';
   styleUrl: './cart.component.scss'
 })
 export class CartComponent {
-  // Sample cart items – in a real app this would come from a cart service
-  items = [
-    { id: 1, name: 'Wireless Headphones', price: 49.99, quantity: 1 },
-    { id: 3, name: 'Cotton T-Shirt', price: 19.99, quantity: 2 }
-  ];
+  constructor(public cart: CartService) {}
+
+  get items() {
+    return this.cart.getItems();
+  }
 
   get subtotal(): number {
-    return this.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    return this.cart.subtotal;
   }
 
   get total(): number {
-    return this.subtotal;
+    return this.cart.subtotal;
+  }
+
+  remove(id: string): void {
+    this.cart.removeItem(id);
   }
 }

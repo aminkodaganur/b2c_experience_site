@@ -1,3 +1,8 @@
+@if (toast.message | async; as msg) {
+  <div class="toast-container" role="alert" aria-live="polite">
+    <div class="toast-message toast-success">{{ msg }}</div>
+  </div>
+}
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
   <div class="container">
     <a class="navbar-brand" routerLink="/">{{ title }}</a>
@@ -5,10 +10,18 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav ms-auto">
+      <ul class="navbar-nav ms-auto align-items-center">
         <li class="nav-item"><a class="nav-link" routerLink="/catalog" routerLinkActive="active">Catalog</a></li>
         <li class="nav-item"><a class="nav-link" routerLink="/products" routerLinkActive="active">Products</a></li>
-        <li class="nav-item"><a class="nav-link" routerLink="/cart" routerLinkActive="active">Cart</a></li>
+        <li class="nav-item">
+          <a class="nav-link cart-btn" routerLink="/cart" routerLinkActive="active">
+            <span class="cart-btn-icon" aria-hidden="true">&#128722;</span>
+            Cart
+            @if ((cart.cartCount$ | async); as count) {
+              <span class="cart-count" [class.cart-count--zero]="count === 0">{{ count }}</span>
+            }
+          </a>
+        </li>
         <li class="nav-item"><a class="nav-link" routerLink="/register" routerLinkActive="active">Register</a></li>
       </ul>
     </div>

@@ -9,15 +9,19 @@
             <th>Price</th>
             <th>Qty</th>
             <th>Subtotal</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           @for (item of items; track item.id) {
             <tr>
               <td>{{ item.name }}</td>
-              <td>${{ item.price }}</td>
+              <td>${{ item.price | number:'1.2-2' }}</td>
               <td>{{ item.quantity }}</td>
-              <td>${{ (item.price * item.quantity).toFixed(2) }}</td>
+              <td>${{ (item.price * item.quantity) | number:'1.2-2' }}</td>
+              <td>
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(item.id)" aria-label="Remove">Remove</button>
+              </td>
             </tr>
           }
         </tbody>

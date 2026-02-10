@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { SalesforceApiService, CatalogRecord } from '../services/salesforce-api.service';
 
 @Component({
   selector: 'app-browse-catalog',
@@ -9,17 +10,37 @@ import { Router, RouterLink } from '@angular/router';
   templateUrl: './browse-catalog.component.html',
   styleUrl: './browse-catalog.component.scss'
 })
-export class BrowseCatalogComponent {
-  categories = [
-    { id: 1, name: 'Electronics', description: 'Phones, Laptops & more' },
-    { id: 2, name: 'Clothing', description: 'Apparel & accessories' },
-    { id: 3, name: 'Home & Garden', description: 'Furniture & decor' },
-    { id: 4, name: 'Sports', description: 'Sports gear & equipment' }
-  ];
+export class BrowseCatalogComponent implements OnInit {
+  catalogs: CatalogRecord[] = [];
+  loading = true;
+  error: string | null = null;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private salesforceApi: SalesforceApiService
+  ) {}
 
-  selectCatalog(categoryId: number): void {
-    this.router.navigate(['/products'], { queryParams: { categoryId } });
+  ngOnInit(): void {
+    this.loadCatalogs();
+  }
+
+  loadCatalogs(): void {
+    this.loading = true;
+    this.error = null;
+    this.salesforceApi.getCatalog().subscribe({
+      next: (list) => {
+        this.catalogs = list;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = err?.message ?? 'Failed to load catalogs from Salesforce.';
+        this.catalogs = [];
+        this.loading = false;
+      }
+    });
+  }
+
+  selectCatalog(catalog: CatalogRecord): void {
+    this.router.navigate(['/products'], { queryParams: { catalogId: catalog.id } });
   }
 }

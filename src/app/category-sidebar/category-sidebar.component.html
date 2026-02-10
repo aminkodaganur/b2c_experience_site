@@ -1,0 +1,23 @@
+<aside class="category-sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-icon" aria-hidden="true">
+      <span class="icon-dot"></span><span class="icon-dot"></span><span class="icon-dot"></span>
+      <span class="icon-dot"></span><span class="icon-dot"></span><span class="icon-dot"></span>
+      <span class="icon-dot"></span><span class="icon-dot"></span><span class="icon-dot"></span>
+    </span>
+    <h3 class="sidebar-title">Categories</h3>
+  </div>
+  <nav class="category-list" aria-label="Product categories">
+    @for (cat of displayCategories; track cat.id) {
+      <button
+        type="button"
+        class="category-item"
+        [class.category-item--active]="selectedCategoryId === cat.id"
+        (click)="selectCategory(cat.id)"
+      >
+        {{ cat.label }}
+      </button>
+    }
+  </nav>
+  <div class="sidebar-footer"></div>
+</aside>

@@ -1,1 +1,21 @@
 .card { max-width: 100%; }
+
+.success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--bs-success, #198754);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.order-id {
+  font-family: ui-monospace, monospace;
+  font-size: 1rem;
+  word-break: break-all;
+  color: #333;
+}

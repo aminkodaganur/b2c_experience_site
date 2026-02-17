@@ -24,6 +24,8 @@ export class PaymentComponent {
   submitting = false;
   error: string | null = null;
   success = false;
+  /** Set after successful checkout; shown in thank-you message. */
+  orderId: string | null = null;
 
   constructor(
     private router: Router,
@@ -50,12 +52,16 @@ export class PaymentComponent {
       .pipe(switchMap(() => this.salesforceApi.checkout(cartId)))
       .subscribe({
         next: (res) => {
-          this.submitting = false;
           if (res.orderId != null) {
+            this.submitting = false;
+            this.orderId = res.orderId;
             this.success = true;
-            this.cart.clear();
-            setTimeout(() => this.router.navigate(['/catalog']), 2500);
+            this.salesforceApi.deleteWebCart(cartId).subscribe({
+              next: () => this.cart.clear(),
+              error: () => this.cart.clear()
+            });
           } else {
+            this.submitting = false;
             const msg = res.errors?.length
               ? res.errors.map((e) => e.errorMessage).join(' ')
               : 'We couldn\'t create the order. Please try again.';

@@ -977,6 +977,27 @@ export class SalesforceApiService {
   }
 
   /**
+   * Deletes the WebCart via REST API. DELETE sobjects/WebCart/{cartId}. Call after successful checkout.
+   */
+  deleteWebCart(cartId: string): Observable<void> {
+    const url = `${this.baseUrl}/services/data/v66.0/sobjects/WebCart/${encodeURIComponent(cartId)}`;
+    return this.getAccessToken().pipe(
+      switchMap((token) => {
+        const headers = new HttpHeaders({
+          Authorization: `Bearer ${token}`,
+        });
+        return this.http.delete<unknown>(url, { headers });
+      }),
+      map(() => undefined),
+      catchError((err) => {
+        const msg = this.getGraphQLOrHttpErrorMessage(err);
+        console.error('Salesforce delete WebCart error', msg, err);
+        throw new Error(msg);
+      })
+    );
+  }
+
+  /**
    * Checkout: POST to connect/consumer/checkout with cartId.
    * Response may have orderId (success) or orderId null with errors array (e.g. Revenue Transaction Error Logs).
    */

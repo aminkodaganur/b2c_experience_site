@@ -1,0 +1,46 @@
+<div class="py-4">
+  <h2 class="mb-4">Payment</h2>
+  @if (success) {
+    <div class="alert alert-success">
+      <strong>Thank you!</strong> Your order has been placed. Redirecting to catalog…
+    </div>
+  } @else {
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <p class="text-muted small mb-3">This is a demo payment form. No real charge will be made.</p>
+            @if (error) {
+              <div class="alert alert-warning mb-3">{{ error }}</div>
+            }
+            <form (ngSubmit)="onSubmit()">
+              <div class="mb-3">
+                <label class="form-label">Cardholder name</label>
+                <input type="text" class="form-control" [(ngModel)]="model.cardholderName" name="cardholderName" placeholder="Name on card">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Card number</label>
+                <input type="text" class="form-control" [(ngModel)]="model.cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+              </div>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label">Expiry</label>
+                  <input type="text" class="form-control" [(ngModel)]="model.expiry" name="expiry" placeholder="MM/YY">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">CVV</label>
+                  <input type="text" class="form-control" [(ngModel)]="model.cvv" name="cvv" placeholder="123">
+                </div>
+              </div>
+              <hr class="my-4">
+              <button type="submit" class="btn btn-primary w-100 mb-2" [disabled]="submitting">
+                {{ submitting ? 'Processing…' : 'Place order' }}
+              </button>
+              <a routerLink="/cart" class="btn btn-outline-secondary w-100">Back to cart</a>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

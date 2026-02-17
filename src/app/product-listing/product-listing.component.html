@@ -8,10 +8,16 @@
       />
     </div>
     <div class="col">
-      <h2 class="mb-3">Product Listing</h2>
-      @if (categoryId) {
-        <p class="text-muted mb-3">Category: {{ categoryId }}</p>
-      }
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h2 class="mb-0">Product Listing</h2>
+        <a routerLink="/cart" class="btn btn-primary go-to-cart-btn">
+          <span class="go-to-cart-icon" aria-hidden="true">&#128722;</span>
+          Go To Cart
+          @if ((cart.cartCount$ | async); as count) {
+            <span class="badge bg-light text-primary ms-1" [class.cart-count--zero]="count === 0">{{ count }}</span>
+          }
+        </a>
+      </div>
 
       @if (loading) {
         <div class="text-center py-5">
@@ -58,7 +64,12 @@
                     </div>
                   </div>
                   <div (click)="$event.stopPropagation()">
-                    <button type="button" class="btn btn-primary btn-sm me-1" (click)="addToCart(product)">Add to cart</button>
+                    <button type="button" class="btn btn-primary btn-sm me-1" (click)="addToCart(product)" [disabled]="addingProductId !== null">
+                      @if (addingProductId === product.id) {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                      }
+                      Add to cart
+                    </button>
                     <a [routerLink]="['/configure', product.id]" [queryParams]="{ catalogId: product.catalogId, priceBookId: product.priceBookId }" class="btn btn-outline-primary btn-sm" (click)="$event.stopPropagation()">Configure</a>
                   </div>
                 </div>

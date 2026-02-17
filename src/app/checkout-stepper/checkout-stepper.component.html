@@ -1,0 +1,67 @@
+<div class="stepper-card">
+  <div class="stepper-track">
+    @for (step of steps; track step.label; let i = $index; let last = $last) {
+      <div class="stepper-step" [attr.data-status]="status(i)">
+        <div class="step-marker-row">
+          @if (isStepRoutable(i)) {
+            <a class="step-link" [routerLink]="isProductsStep(i) ? ['/products'] : [stepRoute(i)]" [queryParams]="isProductsStep(i) ? productsQueryParams : {}" [attr.aria-label]="'Go to step ' + (i + 1) + ': ' + step.label">
+              <div class="step-marker">
+                @if (status(i) === 'completed') {
+                  <span class="step-icon step-icon--completed" aria-hidden="true">&#10003;</span>
+                } @else if (status(i) === 'in_progress') {
+                  <span class="step-icon step-icon--in-progress">
+                    <span class="step-dot"></span>
+                  </span>
+                } @else {
+                  <span class="step-icon step-icon--pending"></span>
+                }
+              </div>
+            </a>
+          } @else {
+            <span class="step-link step-link--disabled">
+              <div class="step-marker">
+                @if (status(i) === 'completed') {
+                  <span class="step-icon step-icon--completed" aria-hidden="true">&#10003;</span>
+                } @else if (status(i) === 'in_progress') {
+                  <span class="step-icon step-icon--in-progress">
+                    <span class="step-dot"></span>
+                  </span>
+                } @else {
+                  <span class="step-icon step-icon--pending"></span>
+                }
+              </div>
+            </span>
+          }
+          @if (!last) {
+            <div class="step-connector" [attr.data-prev]="status(i)"></div>
+          }
+        </div>
+        @if (isStepRoutable(i)) {
+          <a class="step-link step-label" [routerLink]="isProductsStep(i) ? ['/products'] : [stepRoute(i)]" [queryParams]="isProductsStep(i) ? productsQueryParams : {}" [attr.aria-label]="'Go to step ' + (i + 1) + ': ' + step.label">
+            <span class="step-number">STEP {{ i + 1 }}</span>
+            <span class="step-title">{{ step.label }}</span>
+            <span class="step-status" [attr.data-status]="status(i)">
+              @switch (status(i)) {
+                @case ('completed') { Completed }
+                @case ('in_progress') { In Progress }
+                @case ('pending') { Pending }
+              }
+            </span>
+          </a>
+        } @else {
+          <span class="step-link step-link--disabled step-label" aria-hidden="true">
+            <span class="step-number">STEP {{ i + 1 }}</span>
+            <span class="step-title">{{ step.label }}</span>
+            <span class="step-status" [attr.data-status]="status(i)">
+              @switch (status(i)) {
+                @case ('completed') { Completed }
+                @case ('in_progress') { In Progress }
+                @case ('pending') { Pending }
+              }
+            </span>
+          </span>
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,177 @@
+// Match Bootstrap primary / blue header
+$blue: #0d6efd;
+$blue-dark: #0a58ca;
+$blue-light: #6ea8fe;
+$grey: #6b7280;
+$grey-light: #e5e7eb;
+
+.stepper-card {
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 1.25rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.stepper-track {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.stepper-step {
+  display: flex;
+  align-items: flex-start;
+  flex: 0 1 auto;
+  min-width: 0;
+
+  &:last-child .step-connector {
+    display: none;
+  }
+}
+
+.step-marker-row {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 2rem;
+}
+
+.step-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+
+  &:hover .step-title {
+    text-decoration: underline;
+  }
+
+  &.step-label {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-left: 0.5rem;
+  }
+
+  &--disabled {
+    cursor: default;
+    pointer-events: none;
+
+    &:hover .step-title {
+      text-decoration: none;
+    }
+  }
+}
+
+.step-marker {
+  flex-shrink: 0;
+}
+
+.step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  box-sizing: border-box;
+
+  &--completed {
+    background: $blue;
+    color: #fff;
+  }
+
+  &--in-progress {
+    background: #fff;
+    border: 2px solid $blue;
+    .step-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: $blue;
+    }
+  }
+
+  &--pending {
+    background: $blue-light;
+  }
+}
+
+.step-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.step-number {
+  font-size: 0.7rem;
+  color: $grey;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.step-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.25;
+}
+
+.step-status {
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+
+  &[data-status='completed'] {
+    color: $blue;
+  }
+
+  &[data-status='in_progress'] {
+    color: $blue;
+  }
+
+  &[data-status='pending'] {
+    color: $grey;
+  }
+}
+
+.step-connector {
+  flex: 1 1 1.5rem;
+  min-width: 1.5rem;
+  max-width: 3rem;
+  height: 2px;
+  margin: 0 0.35rem;
+  align-self: center;
+
+  &[data-prev='completed'] {
+    background: $blue-dark;
+  }
+
+  &[data-prev='in_progress'] {
+    background: linear-gradient(to right, $blue 0%, $grey-light 100%);
+  }
+
+  &[data-prev='pending'] {
+    background: $grey-light;
+  }
+}
+
+// Responsive: stack or scroll on small screens; keep steps a bit tighter
+@media (max-width: 992px) {
+  .stepper-track {
+    padding-bottom: 0.25rem;
+  }
+
+  .step-title {
+    font-size: 0.8rem;
+  }
+
+  .step-connector {
+    max-width: 2rem;
+  }
+}

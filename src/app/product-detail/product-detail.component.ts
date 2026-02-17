@@ -20,6 +20,7 @@ export class ProductDetailComponent implements OnDestroy {
   product: ProductDetail | StaticProduct | null = null;
   loading = false;
   error: string | null = null;
+  addingToCart = false;
   private readonly destroy$ = new Subject<void>();
 
   staticProducts: Record<number, StaticProduct> = {
@@ -115,18 +116,38 @@ export class ProductDetailComponent implements OnDestroy {
     };
   }
 
+  /** Query params for Back to Listing so catalogId and categoryId are preserved. */
+  getListingQueryParams(): { catalogId?: string; categoryId?: string } {
+    const q = this.route.snapshot.queryParams;
+    return {
+      catalogId: q['catalogId'] ?? undefined,
+      categoryId: q['categoryId'] ?? undefined
+    };
+  }
+
   addToCart(): void {
     if (!this.product) return;
+    this.addingToCart = true;
     const id = String(this.product.id);
     const name = this.product.name;
     const price = this.productPrice;
     const priceBookEntryId = 'priceBookEntryId' in this.product ? this.product.priceBookEntryId : undefined;
     const priceBookId = 'priceBookId' in this.product ? this.product.priceBookId : undefined;
+    const st = (this.product as { sellingModelType?: string; subscriptionPricingTerm?: number }).sellingModelType;
+    const pt = (this.product as { sellingModelType?: string; subscriptionPricingTerm?: number }).subscriptionPricingTerm;
+    const subscriptionOptions =
+      st && st.toLowerCase() !== 'one time' && st.toLowerCase() !== 'onetime' && pt != null
+        ? { sellingModelType: st, pricingTerm: pt }
+        : undefined;
     this.cart
-      .addItem(id, name, price, 1, priceBookEntryId, priceBookId)
+      .addItem(id, name, price, 1, priceBookEntryId, priceBookId, subscriptionOptions)
       .subscribe({
-        next: () => this.toast.show(`${name} added to cart`),
+        next: () => {
+          this.addingToCart = false;
+          this.toast.show(`${name} added to cart`);
+        },
         error: (err) => {
+          this.addingToCart = false;
           this.error = err?.message ?? 'Failed to add to cart.';
         }
       });

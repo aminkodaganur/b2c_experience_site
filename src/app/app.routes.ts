@@ -8,5 +8,6 @@ export const routes: Routes = [
   { path: 'configure/:id', loadComponent: () => import('./configure-product/configure-product.component').then(m => m.ConfigureProductComponent) },
   { path: 'cart', loadComponent: () => import('./cart/cart.component').then(m => m.CartComponent) },
   { path: 'register', loadComponent: () => import('./register-account/register-account.component').then(m => m.RegisterAccountComponent) },
+  { path: 'payment', loadComponent: () => import('./payment/payment.component').then(m => m.PaymentComponent) },
   { path: '**', redirectTo: 'catalog' }
 ];

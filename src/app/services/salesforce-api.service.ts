@@ -23,6 +23,9 @@ export interface ProductListItem {
   priceBookEntryId?: string;
   /** From product list API: categories[0].id – use for category filter when using GraphQL categories */
   categoryIdStr?: string;
+  /** From product list API: productSellingModelOptions.productSellingModel – for subscription cart item */
+  sellingModelType?: string;
+  subscriptionPricingTerm?: number;
 }
 
 /** Product category from GraphQL ProductCategory sobject (filtered by CatalogId). */
@@ -46,6 +49,9 @@ export interface ProductDetail {
   priceBookId?: string;
   /** From product details API: prices[0].priceBookEntryId – use for place API CartItem */
   priceBookEntryId?: string;
+  /** For subscription cart item when not one-time */
+  sellingModelType?: string;
+  subscriptionPricingTerm?: number;
 }
 
 interface TokenResponse {
@@ -69,6 +75,11 @@ interface SalesforceProductCategory {
   catalogId?: string;
 }
 
+interface SalesforceProductSellingModel {
+  sellingModelType?: string;
+  pricingTerm?: number;
+}
+
 interface SalesforceProduct {
   id: string;
   name: string;
@@ -78,6 +89,7 @@ interface SalesforceProduct {
   categories?: SalesforceProductCategory[];
   productCode?: string;
   nodeType?: string;
+  productSellingModelOptions?: { productSellingModel?: SalesforceProductSellingModel }[];
 }
 
 interface ProductListRequest {
@@ -110,6 +122,7 @@ interface SalesforceProductDetail {
   prices?: SalesforceProductDetailPrice[];
   productCode?: string;
   nodeType?: string;
+  productSellingModelOptions?: { productSellingModel?: { sellingModelType?: string; pricingTerm?: number } }[];
 }
 
 interface ProductDetailsResponse {
@@ -151,6 +164,29 @@ export interface CatalogGraphQLResponse {
 /** Same shape as CatalogGraphQLResponse; used for ProductCategory query. */
 type ProductCategoryGraphQLResponse = CatalogGraphQLResponse;
 
+/** Flat cart item from GraphQL (CartItem sobject). */
+export interface CartItemRecord {
+  id: string;
+  cartId: string;
+  parentCartItemId: string | null;
+  quantity: number;
+  salesPrice?: number;
+  product2Id?: string;
+  name?: string;
+}
+
+/** Cart item node with children for tree display. */
+export interface CartItemNode {
+  id: string;
+  cartId: string;
+  parentCartItemId: string | null;
+  quantity: number;
+  salesPrice?: number;
+  product2Id?: string;
+  name?: string;
+  children: CartItemNode[];
+}
+
 /** Place API (create cart / add cart item) request body. */
 interface PlaceSalesTransactionRequest {
   placeSalesTransactionRequest: {
@@ -164,23 +200,77 @@ interface PlaceSalesTransactionRequest {
   };
 }
 
-/** Place API response – salesTransactionId is at placeSalesTransactionResponse.salesTransactionId. */
+/** Place API error item (when isSuccess is false). */
+export interface PlaceErrorItem {
+  errorCode?: string;
+  message?: string;
+  referenceId?: string;
+}
+
+/** Place API response – require isSuccess true and salesTransactionId for success; else use errorResponse. */
 export interface PlaceSalesTransactionResponse {
   placeSalesTransactionResponse?: {
     salesTransactionId?: string;
     isSuccess?: boolean;
     contextDetails?: { contextId?: string; isBuiltInTransaction?: boolean };
-    errorResponse?: unknown[];
+    errorResponse?: PlaceErrorItem[];
   };
 }
 
-/** Extract salesTransactionId from place API response. */
-function getSalesTransactionId(res: unknown): string | null {
+/** Extract place response body (placeSalesTransactionResponse). */
+function getPlaceResponse(res: unknown): Record<string, unknown> | null {
   if (!res || typeof res !== 'object') return null;
-  const place = (res as Record<string, unknown>)['placeSalesTransactionResponse'] as Record<string, unknown> | undefined;
-  if (!place) return null;
-  const id = place['salesTransactionId'];
-  return typeof id === 'string' ? id : null;
+  const place = (res as Record<string, unknown>)['placeSalesTransactionResponse'];
+  return place && typeof place === 'object' ? (place as Record<string, unknown>) : null;
+}
+
+/** Build error message from place API errorResponse array. */
+function getPlaceErrorMessage(place: Record<string, unknown>): string {
+  const errList = place['errorResponse'];
+  if (!Array.isArray(errList) || errList.length === 0) {
+    return 'Add to cart failed.';
+  }
+  const messages = errList
+    .map((e) => {
+      if (e && typeof e === 'object' && 'message' in e) return String((e as { message?: string }).message ?? '');
+      return '';
+    })
+    .filter(Boolean);
+  return messages.length > 0 ? messages.join(' ') : 'Add to cart failed.';
+}
+
+/** Read string/number from GraphQL value type { value } or scalar. */
+function readGraphQLValue(val: unknown): string | null {
+  if (val == null) return null;
+  if (typeof val === 'object' && 'value' in val) return String((val as { value?: unknown }).value ?? '');
+  return typeof val === 'string' || typeof val === 'number' ? String(val) : null;
+}
+
+/** Build parent-child tree from flat CartItem records. */
+function buildCartItemTree(records: CartItemRecord[]): CartItemNode[] {
+  const byId = new Map<string, CartItemNode>();
+  records.forEach((r) => {
+    byId.set(r.id, {
+      id: r.id,
+      cartId: r.cartId,
+      parentCartItemId: r.parentCartItemId,
+      quantity: r.quantity,
+      salesPrice: r.salesPrice,
+      product2Id: r.product2Id,
+      name: r.name,
+      children: [],
+    });
+  });
+  const roots: CartItemNode[] = [];
+  byId.forEach((node) => {
+    const parentId = node.parentCartItemId;
+    if (!parentId || !byId.has(parentId)) {
+      roots.push(node);
+    } else {
+      byId.get(parentId)!.children.push(node);
+    }
+  });
+  return roots;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -189,6 +279,7 @@ export class SalesforceApiService {
   private readonly tokenUrl = `${this.baseUrl}/services/oauth2/token`;
   private readonly productsUrl = `${this.baseUrl}/services/data/v66.0/connect/consumer/products`;
   private readonly placeUrl = `${this.baseUrl}/services/data/v66.0/connect/consumer/place`;
+  private readonly checkoutUrl = `${this.baseUrl}/services/data/v66.0/connect/consumer/checkout`;
   private readonly graphqlUrl = `${this.baseUrl}/services/data/v66.0/graphql`;
 
   private cachedToken: string | null = null;
@@ -232,12 +323,18 @@ export class SalesforceApiService {
     quantity: number,
     salesPrice: number,
     priceBookEntryId?: string,
-    priceBookId?: string
+    priceBookId?: string,
+    subscriptionOptions?: { sellingModelType: string; pricingTerm: number }
   ): Observable<{ cartId: string }> {
     const webStoreId = B2C_CONSTANTS.WebStoreId;
     const pricebook2Id = priceBookId ?? B2C_CONSTANTS.Pricebook2Id;
     const pricebookEntryId = priceBookEntryId ?? B2C_CONSTANTS.Pricebook2Id;
     const records: PlaceSalesTransactionRequest['placeSalesTransactionRequest']['graph']['records'] = [];
+    const isSubscription =
+      subscriptionOptions &&
+      subscriptionOptions.sellingModelType?.toLowerCase() !== 'one time' &&
+      subscriptionOptions.sellingModelType?.toLowerCase() !== 'onetime';
+    const todayIso = new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z';
 
     if (!cartId) {
       records.push({
@@ -249,23 +346,46 @@ export class SalesforceApiService {
           Name: 'B2C Cart',
         },
       });
+      records.push({
+        referenceId: 'cartItemRef',
+        record: {
+          attributes: { type: 'CartItem', method: 'POST' },
+          CartId: '@{cart_id.id}',
+          Product2Id: productId,
+          PricebookEntryId: pricebookEntryId,
+          BillingFrequency: null,
+          Quantity: quantity,
+          SalesPrice: salesPrice,
+          StartDate: isSubscription && subscriptionOptions ? todayIso : null,
+          SubscriptionTerm: isSubscription && subscriptionOptions ? subscriptionOptions.pricingTerm : null,
+          PeriodBoundary: isSubscription && subscriptionOptions ? 'Anniversary' : null,
+        },
+      });
+    } else {
+      records.push({
+        referenceId: 'refCart',
+        record: {
+          attributes: { type: 'WebCart', method: 'PATCH', id: cartId },
+        },
+      });
+      records.push({
+        referenceId: 'cartItemNew',
+        record: {
+          attributes: { type: 'CartItem', method: 'POST' },
+          CartId: '@{refCart.id}',
+          Product2Id: productId,
+          PricebookEntryId: pricebookEntryId,
+          Quantity: quantity,
+          ...(isSubscription && subscriptionOptions
+            ? {
+                StartDate: todayIso,
+                SubscriptionTerm: subscriptionOptions.pricingTerm,
+                PeriodBoundary: 'Anniversary',
+              }
+            : {}),
+        },
+      });
     }
-
-    records.push({
-      referenceId: 'cartItemRef',
-      record: {
-        attributes: { type: 'CartItem', method: 'POST' },
-        CartId: cartId ?? '@{cart_id.id}',
-        Product2Id: productId,
-        PricebookEntryId: pricebookEntryId,
-        BillingFrequency: null,
-        Quantity: quantity,
-        SalesPrice: salesPrice,
-        StartDate: null,
-        SubscriptionTerm: null,
-        PeriodBoundary: null,
-      },
-    });
 
     const body: PlaceSalesTransactionRequest = {
       placeSalesTransactionRequest: {
@@ -285,15 +405,106 @@ export class SalesforceApiService {
         return this.http.post<PlaceSalesTransactionResponse>(this.placeUrl, body, { headers });
       }),
       map((res) => {
-        const salesTransactionId = getSalesTransactionId(res);
+        const place = getPlaceResponse(res);
+        if (!place) {
+          throw new Error('Invalid place API response.');
+        }
+        const isSuccess = place['isSuccess'] === true;
+        const salesTransactionId = typeof place['salesTransactionId'] === 'string' ? place['salesTransactionId'] : null;
+
+        if (!isSuccess) {
+          throw new Error(getPlaceErrorMessage(place));
+        }
         if (!salesTransactionId) {
-          console.error('Place API response (salesTransactionId not found at expected paths):', res);
-          throw new Error('Place API did not return a salesTransactionId');
+          throw new Error('Place API did not return a salesTransactionId.');
         }
         return { cartId: salesTransactionId };
       }),
       catchError((err) => {
         console.error('Salesforce place API error', err);
+        throw err;
+      })
+    );
+  }
+
+  /**
+   * Calls place API to delete a single CartItem. Uses graphId "updateCart" with WebCart PATCH + CartItem DELETE.
+   */
+  placeDeleteCartItem(cartId: string, cartItemId: string): Observable<void> {
+    const records: PlaceSalesTransactionRequest['placeSalesTransactionRequest']['graph']['records'] = [
+      {
+        referenceId: cartId,
+        record: {
+          attributes: { type: 'WebCart', method: 'PATCH', id: cartId },
+        },
+      },
+      {
+        referenceId: cartItemId,
+        record: {
+          attributes: { type: 'CartItem', method: 'DELETE', id: cartItemId },
+        },
+      },
+    ];
+    return this.placeUpdateCart(cartId, records);
+  }
+
+  /**
+   * Calls place API to update a CartItem's quantity. Uses graphId "updateCart" with WebCart PATCH + CartItem PATCH.
+   */
+  placeUpdateCartItemQuantity(cartId: string, cartItemId: string, quantity: number): Observable<void> {
+    const records: PlaceSalesTransactionRequest['placeSalesTransactionRequest']['graph']['records'] = [
+      {
+        referenceId: cartId,
+        record: {
+          attributes: { type: 'WebCart', method: 'PATCH', id: cartId },
+        },
+      },
+      {
+        referenceId: cartItemId,
+        record: {
+          attributes: { type: 'CartItem', method: 'PATCH', id: cartItemId },
+          Quantity: quantity,
+        },
+      },
+    ];
+    return this.placeUpdateCart(cartId, records);
+  }
+
+  /**
+   * POSTs to place API with graphId "updateCart" and given records. Returns void on success.
+   */
+  private placeUpdateCart(
+    _cartId: string,
+    records: PlaceSalesTransactionRequest['placeSalesTransactionRequest']['graph']['records']
+  ): Observable<void> {
+    const body: PlaceSalesTransactionRequest = {
+      placeSalesTransactionRequest: {
+        graph: {
+          graphId: 'updateCart',
+          records,
+        },
+      },
+    };
+    return this.getAccessToken().pipe(
+      switchMap((token) => {
+        const headers = new HttpHeaders({
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        });
+        return this.http.post<PlaceSalesTransactionResponse>(this.placeUrl, body, { headers });
+      }),
+      map((res) => {
+        const place = getPlaceResponse(res);
+        if (!place) {
+          throw new Error('Invalid place API response.');
+        }
+        if (place['isSuccess'] !== true) {
+          throw new Error(getPlaceErrorMessage(place));
+        }
+        return undefined;
+      }),
+      catchError((err) => {
+        console.error('Salesforce place API (update cart) error', err);
         throw err;
       })
     );
@@ -368,6 +579,7 @@ export class SalesforceApiService {
   private mapProductDetail(item: SalesforceProductDetail): ProductDetail {
     const firstPrice = item.prices?.[0];
     const price = firstPrice?.price ?? 0;
+    const sellingModel = item.productSellingModelOptions?.[0]?.productSellingModel;
     return {
       id: item.id,
       name: item.name,
@@ -378,6 +590,8 @@ export class SalesforceApiService {
       nodeType: item.nodeType,
       priceBookId: firstPrice?.priceBookId,
       priceBookEntryId: firstPrice?.priceBookEntryId,
+      sellingModelType: sellingModel?.sellingModelType,
+      subscriptionPricingTerm: sellingModel?.pricingTerm,
     };
   }
 
@@ -458,6 +672,97 @@ export class SalesforceApiService {
   }
 
   /**
+   * Fetches cart items for a cart from GraphQL (CartItem sobject), builds parent-child tree using ParentCartItem.
+   */
+  getCartItems(cartId: string, first = 200): Observable<CartItemNode[]> {
+    const query = `
+      query GetCartItems($cartId: ID, $first: Int) {
+        uiapi {
+          query {
+            CartItem(where: { CartId: { eq: $cartId } }, first: $first) {
+              edges {
+                node {
+                  Id
+                  CartId { value }
+                  ParentCartItem { Id }
+                  Quantity { value }
+                  SalesPrice { value }
+                  Product2Id { value }
+                  Product2 {
+                    Name { value }
+                  }
+                }
+              }
+              pageInfo { hasNextPage endCursor }
+              totalCount
+            }
+          }
+        }
+      }
+    `;
+    const body = {
+      query: query.replace(/\s+/g, ' ').trim(),
+      variables: { cartId, first },
+      operationName: 'GetCartItems',
+    };
+    return this.getAccessToken().pipe(
+      switchMap((token) => {
+        const headers = new HttpHeaders({
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        });
+        return this.http.post<CatalogGraphQLResponse>(this.graphqlUrl, body, { headers });
+      }),
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors.map((e) => e.message).join('; '));
+        }
+        const queryData = res.data?.uiapi?.query?.['CartItem'];
+        const edges = queryData?.edges ?? [];
+        const records: CartItemRecord[] = edges
+          .map((e) => e.node)
+          .filter((n): n is NonNullable<typeof n> => n != null)
+          .map((node) => {
+            const cartIdVal = node['CartId'];
+            const cartIdStr = readGraphQLValue(cartIdVal);
+            const parentVal = node['ParentCartItem'];
+            let parentId: string | null = null;
+            if (parentVal && typeof parentVal === 'object' && parentVal !== null) {
+              const p = parentVal as Record<string, unknown>;
+              const raw = p['Id'];
+              parentId = typeof raw === 'string' ? raw : readGraphQLValue(raw);
+            }
+            const qtyVal = node['Quantity'];
+            const qty = parseInt(readGraphQLValue(qtyVal) ?? '1', 10) || 1;
+            const priceVal = node['SalesPrice'];
+            const salesPrice = parseFloat(readGraphQLValue(priceVal) ?? '0') || 0;
+            const product2Id = readGraphQLValue(node['Product2Id']);
+            const product2 = node['Product2'] as Record<string, unknown> | null | undefined;
+            const productName =
+              product2 && typeof product2 === 'object' && product2['Name'] != null
+                ? readGraphQLValue(product2['Name'])
+                : null;
+            return {
+              id: node.Id ?? '',
+              cartId: cartIdStr ?? '',
+              parentCartItemId: parentId ?? null,
+              quantity: qty,
+              salesPrice: salesPrice || undefined,
+              product2Id: product2Id ?? undefined,
+              name: productName ?? undefined,
+            } as CartItemRecord;
+          });
+        return buildCartItemTree(records);
+      }),
+      catchError((err) => {
+        const message = this.getGraphQLOrHttpErrorMessage(err);
+        console.error('Salesforce GraphQL CartItem error', message, err);
+        throw new Error(message);
+      })
+    );
+  }
+
+  /**
    * Fetches catalog records from Salesforce via GraphQL (Catalog or ProductCatalog sobject).
    * Tries 'ProductCatalog' first (common in B2C/Commerce), then 'Catalog'.
    * @param first - Max number of records (default 50)
@@ -501,7 +806,7 @@ export class SalesforceApiService {
         }
       }
     `;
-    const body = {
+    const body = { 
       query: query.replace(/\s+/g, ' ').trim(),
       variables: { first },
       operationName: 'GetCatalog',
@@ -569,6 +874,7 @@ export class SalesforceApiService {
     const firstCategory = item.categories?.[0];
     const firstPrice = item.prices?.[0];
     const categoryId = firstCategory ? this.hashCode(firstCategory.id) % 10 : 0;
+    const sellingModel = item.productSellingModelOptions?.[0]?.productSellingModel;
     return {
       id: item.id,
       name: item.name,
@@ -583,6 +889,8 @@ export class SalesforceApiService {
       priceBookId: firstPrice?.priceBookId,
       priceBookEntryId: firstPrice?.priceBookEntryId,
       categoryIdStr: firstCategory?.id,
+      sellingModelType: sellingModel?.sellingModelType,
+      subscriptionPricingTerm: sellingModel?.pricingTerm,
     };
   }
 
@@ -594,4 +902,108 @@ export class SalesforceApiService {
     }
     return h;
   }
+
+  /**
+   * Creates an Account via REST API. Returns the new Account Id.
+   * Uses individual shipping fields: ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry.
+   */
+  createAccount(record: {
+    Name: string;
+    ShippingStreet: string;
+    ShippingCity: string;
+    ShippingState: string;
+    ShippingPostalCode: string;
+    ShippingCountry: string;
+    Phone: string;
+    Email__c: string;
+    Password__c: string;
+  }): Observable<{ id: string }> {
+    const url = `${this.baseUrl}/services/data/v66.0/sobjects/Account`;
+    const body = {
+      Name: record.Name,
+      Phone: record.Phone,
+      ShippingStreet: record.ShippingStreet,
+      ShippingCity: record.ShippingCity,
+      ShippingState: record.ShippingState,
+      ShippingPostalCode: record.ShippingPostalCode,
+      ShippingCountry: record.ShippingCountry,
+      Email__c: record.Email__c,
+      Password__c: record.Password__c,
+    };
+    return this.getAccessToken().pipe(
+      switchMap((token) => {
+        const headers = new HttpHeaders({
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        });
+        return this.http.post<{ id: string }>(url, body, { headers });
+      }),
+      map((res) => {
+        const id = res?.id;
+        if (!id) {
+          throw new Error('Account create did not return an id.');
+        }
+        return { id };
+      }),
+      catchError((err) => {
+        const msg = this.getGraphQLOrHttpErrorMessage(err);
+        console.error('Salesforce create Account error', msg, err);
+        throw new Error(msg);
+      })
+    );
+  }
+
+  /**
+   * Updates WebCart's AccountId via REST API. PATCH sobjects/WebCart/{cartId}.
+   */
+  updateWebCartAccountId(cartId: string, accountId: string): Observable<void> {
+    const url = `${this.baseUrl}/services/data/v66.0/sobjects/WebCart/${encodeURIComponent(cartId)}`;
+    const body = { AccountId: accountId };
+    return this.getAccessToken().pipe(
+      switchMap((token) => {
+        const headers = new HttpHeaders({
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        });
+        return this.http.patch<unknown>(url, body, { headers });
+      }),
+      map(() => undefined),
+      catchError((err) => {
+        const msg = this.getGraphQLOrHttpErrorMessage(err);
+        console.error('Salesforce update WebCart AccountId error', msg, err);
+        throw new Error(msg);
+      })
+    );
+  }
+
+  /**
+   * Checkout: POST to connect/consumer/checkout with cartId.
+   * Response may have orderId (success) or orderId null with errors array (e.g. Revenue Transaction Error Logs).
+   */
+  checkout(cartId: string): Observable<CheckoutResponse> {
+    const body = { cartId };
+    return this.getAccessToken().pipe(
+      switchMap((token) => {
+        const headers = new HttpHeaders({
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        });
+        return this.http.post<CheckoutResponse>(this.checkoutUrl, body, { headers });
+      }),
+      catchError((err) => {
+        console.error('Salesforce checkout error', err);
+        throw err;
+      })
+    );
+  }
+}
+
+/** Checkout API response. When orderId is null, errors contain the reason. */
+export interface CheckoutResponse {
+  orderId: string | null;
+  errors?: Array<{
+    errorMessage: string;
+    referenceId: string | null;
+    statusCode: string;
+  }>;
 }

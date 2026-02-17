@@ -32,12 +32,14 @@ export class ProductListingComponent implements OnInit {
   products: ProductListItem[] = [];
   loading = true;
   error: string | null = null;
+  /** Product id for which Add to cart is in progress (shows loading on that button). */
+  addingProductId: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private salesforceApi: SalesforceApiService,
-    private cart: CartService,
+    public cart: CartService,
     private toast: ToastService
   ) {
     this.route.queryParams.subscribe(p => {
@@ -147,12 +149,21 @@ export class ProductListingComponent implements OnInit {
   }
 
   goToDetail(product: ProductListItem): void {
-    this.router.navigate(['/product', product.id], {
-      queryParams: { catalogId: product.catalogId ?? undefined, priceBookId: product.priceBookId ?? undefined }
-    });
+    const queryParams: Record<string, string | undefined> = {};
+    if (this.catalogId ?? product.catalogId) queryParams['catalogId'] = this.catalogId ?? product.catalogId ?? undefined;
+    if (product.priceBookId) queryParams['priceBookId'] = product.priceBookId;
+    if (this.categoryId) queryParams['categoryId'] = this.categoryId;
+    this.router.navigate(['/product', product.id], { queryParams });
   }
 
   addToCart(product: ProductListItem): void {
+    this.addingProductId = product.id;
+    const st = product.sellingModelType;
+    const pt = product.subscriptionPricingTerm;
+    const subscriptionOptions =
+      st && st.toLowerCase() !== 'one time' && st.toLowerCase() !== 'onetime' && pt != null
+        ? { sellingModelType: st, pricingTerm: pt }
+        : undefined;
     this.cart
       .addItem(
         product.id,
@@ -160,11 +171,16 @@ export class ProductListingComponent implements OnInit {
         product.price,
         product.quantity,
         product.priceBookEntryId,
-        product.priceBookId
+        product.priceBookId,
+        subscriptionOptions
       )
       .subscribe({
-        next: () => this.toast.show(`${product.name} added to cart`),
+        next: () => {
+          this.addingProductId = null;
+          this.toast.show(`${product.name} added to cart`);
+        },
         error: (err) => {
+          this.addingProductId = null;
           this.error = err?.message ?? 'Failed to add to cart.';
         }
       });

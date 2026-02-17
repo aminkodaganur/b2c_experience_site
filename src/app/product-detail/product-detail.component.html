@@ -11,11 +11,11 @@
       <span class="me-2" aria-hidden="true">⚠</span>
       <div>{{ error }}</div>
     </div>
-    <a routerLink="/products" class="btn btn-primary">Back to Products</a>
+    <a routerLink="/products" [queryParams]="getListingQueryParams()" class="btn btn-primary">Back to Products</a>
   } @else if (product) {
     <nav aria-label="breadcrumb" class="mb-3">
       <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a routerLink="/products">Products</a></li>
+        <li class="breadcrumb-item"><a routerLink="/products" [queryParams]="getListingQueryParams()">Products</a></li>
         <li class="breadcrumb-item active">{{ product.name }}</li>
       </ol>
     </nav>
@@ -36,12 +36,17 @@
         <p class="text-primary fs-4 fw-bold">${{ productPrice | number:'1.2-2' }}</p>
         <p class="card-text text-muted">{{ product.description }}</p>
         <a [routerLink]="['/configure', product.id]" [queryParams]="getConfigureQueryParams()" class="btn btn-primary">Configure</a>
-        <button type="button" class="btn btn-outline-primary ms-2" (click)="addToCart()">Add to cart</button>
-        <a routerLink="/products" class="btn btn-outline-secondary ms-2">Back to Listing</a>
+        <button type="button" class="btn btn-outline-primary ms-2" (click)="addToCart()" [disabled]="addingToCart">
+          @if (addingToCart) {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          }
+          Add to cart
+        </button>
+        <a routerLink="/products" [queryParams]="getListingQueryParams()" class="btn btn-outline-secondary ms-2">Back to Listing</a>
       </div>
     </div>
   } @else {
     <p class="text-muted">Product not found.</p>
-    <a routerLink="/products" class="btn btn-primary">Back to Products</a>
+    <a routerLink="/products" [queryParams]="getListingQueryParams()" class="btn btn-primary">Back to Products</a>
   }
 </div>

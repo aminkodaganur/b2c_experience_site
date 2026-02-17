@@ -1,3 +1,18 @@
+.go-to-cart-btn {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+
+  .go-to-cart-icon {
+    font-size: 1.1rem;
+    margin-right: 0.35rem;
+  }
+
+  .badge.cart-count--zero {
+    opacity: 0.8;
+  }
+}
+
 .product-image-section {
   overflow: hidden;
   background: var(--bs-light, #f8f9fa);
